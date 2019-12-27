@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Keyboard xmlns:android="http://schemas.android.com/apk/res/android"
+    android:keyWidth="10%p"
+    android:keyHeight="10%p" >
+
+    <Row>
+        <Key android:keyLabel="あ"/>
+        <Key android:keyLabel="い"/>
+        <Key android:keyLabel="う"/>
+        <Key android:keyLabel="え"/>
+        <Key android:keyLabel="お"/>
+        <Key android:keyLabel="か" android:popupKeyboard="@xml/popup" android:popupCharacters="が"/>
+        <Key android:keyLabel="き" android:popupKeyboard="@xml/popup" android:popupCharacters="ぎ"/>
+        <Key android:keyLabel="く" android:popupKeyboard="@xml/popup" android:popupCharacters="ぐ"/>
+        <Key android:keyLabel= "け" android:popupKeyboard="@xml/popup" android:popupCharacters="げ"/>
+        <Key android:keyLabel= "こ" android:popupKeyboard="@xml/popup" android:popupCharacters="ご"/>
+    </Row>
+    <Row>
+        <Key android:keyLabel="さ" android:popupKeyboard="@xml/popup" android:popupCharacters="ざ"/>
+        <Key android:keyLabel="し" android:popupKeyboard="@xml/popup" android:popupCharacters="じ"/>
+        <Key android:keyLabel="す" android:popupKeyboard="@xml/popup" android:popupCharacters="ず"/>
+        <Key android:keyLabel="せ" android:popupKeyboard="@xml/popup" android:popupCharacters="ぜ"/>
+        <Key android:keyLabel="そ" android:popupKeyboard="@xml/popup" android:popupCharacters="ぞ"/>
+        <Key android:keyLabel="た" android:popupKeyboard="@xml/popup" android:popupCharacters="だ"/>
+        <Key android:keyLabel="ち" android:popupKeyboard="@xml/popup" android:popupCharacters="ぢ"/>
+        <Key android:keyLabel="つ" android:popupKeyboard="@xml/popup" android:popupCharacters="づ"/>
+        <Key android:codes="@integer/keyboard_backspace" android:keyLabel="←"/>
+    </Row>
+    <Row>
+        <Key android:codes="@integer/keyboard_hiragana1" android:keyLabel="1/2"/>
+        <Key android:keyLabel="な"/>
+        <Key android:keyLabel="に"/>
+        <Key android:keyLabel="ぬ"/>
+        <Key android:keyLabel="ね"/>
+        <Key android:keyLabel="の"/>
+        <Key android:keyLabel="て" android:popupKeyboard="@xml/popup" android:popupCharacters="で"/>
+        <Key android:keyLabel="と" android:popupKeyboard="@xml/popup" android:popupCharacters="ど"/>
+        <Key android:codes="@integer/keyboard_enter" android:keyLabel="⏎"/>
+    </Row>
+</Keyboard>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <integer name="keyboard_enter">0</integer>
+
+    <integer name="keyboard_hiragana0">1</integer>
+    <integer name="keyboard_hiragana1">2</integer>
+    <integer name="keyboard_katakana0">3</integer>
+    <integer name="keyboard_katakana1">4</integer>
+    <integer name="keyboard_romanji">5</integer>
+
+    <integer name="keyboard_backspace">8</integer>
+</resources>
