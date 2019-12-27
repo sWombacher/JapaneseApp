@@ -1,3 +1,6 @@
+# C++ related ignores
+build-*
+
 # Built application files
 *.apk
 *.aar
@@ -83,3 +86,4 @@ lint/generated/
 lint/outputs/
 lint/tmp/
 # lint/reports/
+
