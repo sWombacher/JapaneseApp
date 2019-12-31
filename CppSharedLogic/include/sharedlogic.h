@@ -106,7 +106,7 @@ namespace shared {
             Mixed = EnglishToKana | KanaToEnglish
         };
 
-        QuestionHandler(std::shared_ptr<VocabularyDeck> manager);
+        QuestionHandler(std::shared_ptr<const VocabularyDeck> manager);
         void operator=(QuestionHandler&) = delete;
         QuestionHandler(QuestionHandler&) = delete;
 
@@ -114,10 +114,11 @@ namespace shared {
         std::vector<Question>
             getQuestionSet(FlagEnum_QuestionType type,
                            FlagEnum_TranslationType conversion =
-                               FlagEnum_TranslationType::Mixed) const;
+                               FlagEnum_TranslationType::Mixed);
 
       private:
-        std::shared_ptr<VocabularyDeck> m_VocabularyMaanger;
+        void acceptAnswerCallback(unsigned vocIdx, bool accept);
+        std::shared_ptr<const VocabularyDeck> m_VocabularyMaanger;
     };
 
     struct GenericTranslator {
@@ -180,7 +181,7 @@ namespace shared {
         void loadDeck(std::wstring_view filename);
         std::vector<std::wstring> listDecks() const;
         bool removeDeck(std::wstring_view filename) const;
-        std::shared_ptr<VocabularyDeck> getCurrentDeck() const;
+        std::shared_ptr<const VocabularyDeck> getCurrentDeck() const;
 
         static constexpr const auto VocabularyDeck_Exstension = ".vd";
 
@@ -204,7 +205,7 @@ namespace shared {
                 detail::Vocabulary::Type::N5, "n5")};
 
       private:
-        std::shared_ptr<VocabularyDeck> m_CurrentDeck;
+        std::shared_ptr<const VocabularyDeck> m_CurrentDeck;
 
         const VocabularyTranslator m_Translator;
         const std::filesystem::path m_UserFilePath;

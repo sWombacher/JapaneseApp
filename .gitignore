@@ -1,5 +1,6 @@
 # C++ related ignores
 build-*
+CppSharedLogic/CMakeLists.txt.user
 
 # Built application files
 *.apk

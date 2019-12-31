@@ -22,27 +22,32 @@ namespace shared {
         }
 
         static Question ConvertVocabularyToQuestion_EnglishToKana(
+            std::function<void(bool)> acceptCallback,
             const detail::Vocabulary& voc) {
             auto rng_iter = detail::util::getRandomIterator(
                 voc.english.cbegin(), voc.english.cend());
 
             return Question(Question::KeyboardType::English, *rng_iter,
-                            {voc.kana});
+                            {voc.kana}, std::move(acceptCallback));
         }
         static Question ConvertVocabularyToQuestion_KanaToEnglish(
+            std::function<void(bool)> acceptCallback,
             const detail::Vocabulary& voc) {
             auto rng_iter = detail::util::getRandomIterator(
                 voc.english.cbegin(), voc.english.cend());
 
             return Question(Question::KeyboardType::English, *rng_iter,
-                            {voc.kana});
+                            {voc.kana}, std::move(acceptCallback));
         }
-        static Question
-            ConvertVocabularyToQuestion_Mixed(const detail::Vocabulary& voc) {
-            if ((detail::util::GetRandomGenerator()()) & 1)
-                return ConvertVocabularyToQuestion_EnglishToKana(voc);
-
-            return ConvertVocabularyToQuestion_KanaToEnglish(voc);
+        static Question ConvertVocabularyToQuestion_Mixed(
+            std::function<void(bool)> acceptCallback,
+            const detail::Vocabulary& voc) {
+            if ((detail::util::GetRandomGenerator()()) & 1) {
+                return ConvertVocabularyToQuestion_EnglishToKana(
+                    std::move(acceptCallback), voc);
+            }
+            return ConvertVocabularyToQuestion_KanaToEnglish(
+                std::move(acceptCallback), voc);
         }
 
       public:
@@ -107,43 +112,56 @@ namespace shared {
             return vocs;
         }
 
+        static decltype(auto) GetConvertVocsToQuestionFunction(
+            QuestionHandler::FlagEnum_TranslationType conversion) {
+            using Conv = QuestionHandler::FlagEnum_TranslationType;
+            auto convFunc = ConvertVocabularyToQuestion_Mixed;
+            if (conversion == Conv::EnglishToKana)
+                convFunc = ConvertVocabularyToQuestion_EnglishToKana;
+            else if (conversion == Conv::KanaToEnglish)
+                convFunc = ConvertVocabularyToQuestion_KanaToEnglish;
+
+            return convFunc;
+        }
+
         static decltype(auto) ConvertVocsToQuestion(
+            std::function<void(unsigned vocIdx, bool accpet)> acceptCallback,
             const std::vector<detail::Vocabulary>& vocs,
             QuestionHandler::FlagEnum_TranslationType conversion) {
 
-            using Conv = QuestionHandler::FlagEnum_TranslationType;
-            Question (*convFunc)(const detail::Vocabulary&) = nullptr;
-            switch (conversion) {
-            case Conv::EnglishToKana:
-                convFunc = ConvertVocabularyToQuestion_EnglishToKana;
-                break;
-            case Conv::KanaToEnglish:
-                convFunc = ConvertVocabularyToQuestion_KanaToEnglish;
-                break;
-            case Conv::Mixed:
-            default:
-                convFunc = ConvertVocabularyToQuestion_Mixed;
-                break;
-            }
+            const auto convFunc = GetConvertVocsToQuestionFunction(conversion);
             std::vector<Question> result;
             result.reserve(vocs.size());
-            std::transform(vocs.cbegin(), vocs.cend(),
-                           std::back_inserter(result), convFunc);
+
+            // maybe find a way to use std::transform or similar...
+            for (unsigned vocIdx = 0; vocIdx < vocs.size(); ++vocIdx) {
+                auto callbackFunc = [vocIdx, acceptCallback](bool accept) {
+                    acceptCallback(vocIdx, accept);
+                };
+                result.push_back(convFunc(callbackFunc, vocs[vocIdx]));
+            }
             return result;
         }
     };
 
     std::vector<Question> QuestionHandler::getQuestionSet(
         QuestionHandler::FlagEnum_QuestionType type,
-        QuestionHandler::FlagEnum_TranslationType conversion) const {
+        QuestionHandler::FlagEnum_TranslationType conversion) {
 
         const auto vocs =
             QuestionSetHelper::GetVocs(type, *this->m_VocabularyMaanger);
 
-        return QuestionSetHelper::ConvertVocsToQuestion(vocs, conversion);
+        return QuestionSetHelper::ConvertVocsToQuestion(
+            [this](unsigned vocIdx, bool accept) {
+                this->acceptAnswerCallback(vocIdx, accept);
+            },
+            vocs, conversion);
     }
 
-    QuestionHandler::QuestionHandler(std::shared_ptr<VocabularyDeck> manager)
+    void QuestionHandler::acceptAnswerCallback(unsigned vocIdx, bool accept) {}
+
+    QuestionHandler::QuestionHandler(
+        std::shared_ptr<const VocabularyDeck> manager)
         : m_VocabularyMaanger(std::move(manager)) {}
 
     Question::Question(Question::KeyboardType kbt,
@@ -272,7 +290,7 @@ namespace shared {
     detail::VocabularyVector combineVocs(const detail::VocabularyVector& v0,
                                          const detail::VocabularyVector& v1) {
         detail::VocabularyVector result = v0;
-        result.insert(result.end(), v0.cbegin(), v0.cend());
+        result.insert(result.end(), v1.cbegin(), v1.cend());
         return result;
     }
 
@@ -318,7 +336,7 @@ namespace shared {
         return decks;
     }
 
-    std::shared_ptr<VocabularyDeck> LogicHandler::getCurrentDeck() const {
+    std::shared_ptr<const VocabularyDeck> LogicHandler::getCurrentDeck() const {
         return this->m_CurrentDeck;
     }
 
