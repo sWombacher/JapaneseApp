@@ -48,9 +48,13 @@ namespace detail::util {
     }
 
     template <typename _Container>
-    std::wstring combineWStringContainerToWstring(const _Container& container) {
+    std::wstring
+        combineWStringContainerToWstring(const _Container& container,
+                                         std::wstring_view separator = L"; ") {
         std::wstring res;
-        const std::wstring_view separator = L"; ";
+        if (container.empty())
+            return res;
+
         for (const auto& e : container) {
             res.insert(res.end(), std::begin(e), std::end(e));
             res.insert(res.end(), separator.begin(), separator.end());
@@ -65,7 +69,7 @@ namespace detail::util {
             sqlite3* ptr = nullptr;
             const auto res = sqlite3_open(filepath.data(), &ptr);
             this->m_Db.reset(ptr);
-            if (res)
+            if (res != SQLITE_OK)
                 this->m_Db = nullptr;
         }
 

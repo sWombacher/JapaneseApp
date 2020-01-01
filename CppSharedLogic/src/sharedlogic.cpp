@@ -1,8 +1,11 @@
 #include "sharedlogic.h"
 
+#include <iostream>
+
 #include <cassert>
 #include <random>
 #include <sqlite3.h>
+#include <sstream>
 
 #include "detail/util.hpp"
 
@@ -125,9 +128,9 @@ namespace shared {
         }
 
         static decltype(auto) ConvertVocsToQuestion(
-            std::function<void(unsigned vocIdx, bool accpet)> acceptCallback,
             const std::vector<detail::Vocabulary>& vocs,
-            QuestionHandler::FlagEnum_TranslationType conversion) {
+            QuestionHandler::FlagEnum_TranslationType conversion,
+            std::function<void(unsigned vocIdx, bool accpet)> acceptCallback) {
 
             const auto convFunc = GetConvertVocsToQuestionFunction(conversion);
             std::vector<Question> result;
@@ -151,17 +154,29 @@ namespace shared {
         const auto vocs =
             QuestionSetHelper::GetVocs(type, *this->m_VocabularyMaanger);
 
+        using FcIndexType = VocabularyDeck::Flashcard::index_type;
         return QuestionSetHelper::ConvertVocsToQuestion(
-            [this](unsigned vocIdx, bool accept) {
+            vocs, conversion, [this](FcIndexType vocIdx, bool accept) {
                 this->acceptAnswerCallback(vocIdx, accept);
-            },
-            vocs, conversion);
+            });
     }
 
-    void QuestionHandler::acceptAnswerCallback(unsigned vocIdx, bool accept) {}
+    void QuestionHandler::acceptAnswerCallback(
+        VocabularyDeck::Flashcard::index_type vocIdx, bool accept) {
+        const auto fc = this->m_VocabularyMaanger->getFlashcard(vocIdx);
+        assert(fc);
 
-    QuestionHandler::QuestionHandler(
-        std::shared_ptr<const VocabularyDeck> manager)
+        using Fc = VocabularyDeck::Flashcard;
+        auto update = [this, iter = fc->vocIter](Fc::index_type newIdx) {
+            this->m_VocabularyMaanger->setFlashcardIndex(iter, newIdx);
+        };
+        if (accept && fc->cardIndex > Fc::MIN_CARD_INDEX)
+            update(fc->cardIndex - 1);
+        else if (!accept && fc->cardIndex < Fc::MAX_CARD_INDEX)
+            update(fc->cardIndex + 1);
+    }
+
+    QuestionHandler::QuestionHandler(std::shared_ptr<VocabularyDeck> manager)
         : m_VocabularyMaanger(std::move(manager)) {}
 
     Question::Question(Question::KeyboardType kbt,
@@ -223,13 +238,12 @@ namespace shared {
         std::wstring_view english) const {
         const auto voc = this->m_VocabularyMaanger.findAllEnglish(english);
         std::vector<std::wstring> tmpContainer(voc.size());
-        std::transform(
-            voc.cbegin(), voc.cend(), tmpContainer.begin(),
-            [](detail::VocabularyVector::const_iterator iter) {
-                return detail::util::combineWStringContainerToWstring(
-                    iter->english);
-            });
-        return detail::util::combineWStringContainerToWstring(tmpContainer);
+        std::transform(voc.cbegin(), voc.cend(), tmpContainer.begin(),
+                       [](detail::VocabularyVector::const_iterator iter) {
+                           return iter->kana;
+                       });
+        return detail::util::combineWStringContainerToWstring(tmpContainer,
+                                                              L"\n");
     }
 
     VocabularyTranslator::VocabularyTranslator(
@@ -240,11 +254,14 @@ namespace shared {
         VocabularyTranslator::translateKana(std::wstring_view kana) const {
         const auto voc = this->m_VocabularyMaanger.findAllKana(kana);
         std::vector<std::wstring> tmpContainer(voc.size());
-        std::transform(voc.cbegin(), voc.cend(), tmpContainer.begin(),
-                       [](detail::VocabularyVector::const_iterator iter) {
-                           return iter->kana;
-                       });
-        return detail::util::combineWStringContainerToWstring(tmpContainer);
+        std::transform(
+            voc.cbegin(), voc.cend(), tmpContainer.begin(),
+            [](detail::VocabularyVector::const_iterator iter) {
+                return detail::util::combineWStringContainerToWstring(
+                    iter->english);
+            });
+        return detail::util::combineWStringContainerToWstring(tmpContainer,
+                                                              L"\n");
     }
 
     static detail::VocabularyVector
@@ -280,7 +297,10 @@ namespace shared {
     }
 
     static detail::VocabularyVector
-        parseJmdictData(const std::filesystem::path& basepath) {
+        parseJmdictData(const std::filesystem::path& basepath, bool enable) {
+        if (!enable)
+            return {};
+
         const auto parsed = detail::VocParser::parseJMDictFile(
             basepath / LogicHandler::FileName_Jmdict);
 
@@ -295,12 +315,16 @@ namespace shared {
     }
 
     LogicHandler::LogicHandler(const std::filesystem::path& databasesDirectory,
-                               const std::filesystem::path& userFilePath)
+                               const std::filesystem::path& userFilePath,
+                               bool enableJmdict)
         : m_Translator(this->m_AllVocabulary), m_UserFilePath(userFilePath),
           m_AnkiVocabulary(parseAnkiData(databasesDirectory)),
-          m_JmdictVocabulary(parseJmdictData(databasesDirectory)),
+          m_JmdictVocabulary(parseJmdictData(databasesDirectory, enableJmdict)),
           m_AllVocabulary(
-              combineVocs(this->m_AnkiVocabulary, this->m_JmdictVocabulary)) {}
+              combineVocs(this->m_AnkiVocabulary, this->m_JmdictVocabulary)) {
+        this->m_CurrentDeck =
+            std::make_shared<VocabularyDeck>(this->m_UserFilePath);
+    }
 
     QuestionHandler LogicHandler::createQuestionHandler() const {
         return QuestionHandler(this->m_CurrentDeck);
@@ -308,6 +332,10 @@ namespace shared {
 
     const VocabularyTranslator& LogicHandler::getVocabularyTranslator() const {
         return this->m_Translator;
+    }
+
+    const detail::VocabularyVector& LogicHandler::getAllVocabulary() const {
+        return this->m_AllVocabulary;
     }
 
     VocabularyDeck LogicHandler::createVocabularyDeck() const {
@@ -324,16 +352,31 @@ namespace shared {
             std::make_shared<VocabularyDeck>(this->m_UserFilePath, filename);
     }
 
+    static bool findExtensionAtEnd(std::wstring str, std::wstring_view ext) {
+        std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+        const auto pos = str.rfind(ext);
+        if (pos == std::wstring::npos)
+            return false;
+
+        return str.size() - pos - ext.size() == 0;
+    }
+
     std::vector<std::wstring> LogicHandler::listDecks() const {
+        const auto ext = LogicHandler::VocabularyDeck_Exstension;
         std::vector<std::wstring> decks;
         for (const auto& e :
              std::filesystem::directory_iterator(this->m_UserFilePath)) {
-            auto name = e.path().filename().string();
-            std::transform(name.begin(), name.end(), name.begin(), ::tolower);
-            if (name.rfind(LogicHandler::VocabularyDeck_Exstension) == 0)
-                decks.push_back(e.path().wstring());
+            auto name = e.path().filename().wstring();
+            if (findExtensionAtEnd(name, ext))
+                decks.push_back(std::move(name));
         }
         return decks;
+    }
+
+    bool LogicHandler::removeDeck(std::wstring_view filename) const {
+        const auto path = this->m_UserFilePath / filename;
+        if (std::filesystem::is_regular_file(path))
+            std::filesystem::remove(path);
     }
 
     std::shared_ptr<const VocabularyDeck> LogicHandler::getCurrentDeck() const {
@@ -418,7 +461,8 @@ namespace shared {
         if (iter != sfc.end() && iter->vocIter == fc.vocIter)
             return false;
 
-        this->m_SortedFlashcards.insert(std::next(iter), fc);
+        iter = (iter == sfc.end()) ? sfc.begin() : std::next(iter);
+        this->m_SortedFlashcards.insert(iter, fc);
         return true;
     }
 
@@ -426,29 +470,42 @@ namespace shared {
         return this->getAllVocabularies();
     }
 
-    void VocabularyDeck::load(std::wstring_view filename) {
-        if (filename.empty())
-            return;
+    bool VocabularyDeck::load(std::wstring_view filename) {
+        const auto path = this->m_UserFilePath / filename;
+        if (filename.empty() || !std::filesystem::exists(path))
+            return false;
+
+        return this->_loadFromFile(path);
     }
 
-    void VocabularyDeck::save() {
+    bool VocabularyDeck::save() {
         const auto path = this->m_UserFilePath / this->m_DeckName;
-        if (!std::filesystem::exists(path))
-            return;
+        if (!std::filesystem::is_regular_file(path))
+            return false;
 
-        detail::util::Sqlite3OpenCloseHelper db(path.string());
-        if (!db)
-            throw std::runtime_error("");
+        return this->_saveToFile(path);
     }
 
-    void VocabularyDeck::saveAs(std::wstring_view filename) {}
+    bool VocabularyDeck::saveAs(std::wstring filename) {
+        const auto& ext = LogicHandler::VocabularyDeck_Exstension;
+        if (const auto pos = filename.rfind('.'); pos != std::string::npos)
+            filename.replace(pos, std::string::npos, ext);
+        else
+            filename += ext;
 
-    void VocabularyDeck::addVocabularyUnique(detail::Vocabulary voc) {
-        auto citer = std::find(this->m_Vocabulary.cbegin(),
-                               this->m_Vocabulary.cend(), voc);
+        const auto path = this->m_UserFilePath / filename;
+        if (filename.empty() || std::filesystem::exists(path))
+            return false;
 
-        if (citer != this->m_Vocabulary.cend())
-            this->m_Vocabulary.push_back(std::move(voc));
+        return this->_saveToFile(path);
+    }
+
+    void VocabularyDeck::addVocabularyUnique(const detail::Vocabulary& voc) {
+        const auto citer = std::find(this->m_Vocabulary.cbegin(),
+                                     this->m_Vocabulary.cend(), voc);
+
+        if (citer == this->m_Vocabulary.cend())
+            this->m_Vocabulary.push_back(voc);
     }
 
     void VocabularyDeck::clear() { this->m_Vocabulary.clear(); }
@@ -461,6 +518,258 @@ namespace shared {
             return false;
 
         this->m_Vocabulary.erase(iter);
+        return true;
+    }
+
+    struct VocabularyDeck_SaveLoad_Helper {
+
+        static constexpr const wchar_t VocSplitWChar = L';';
+
+        static std::vector<std::wstring>
+            splitVocDeckString(const std::wstring& wstr) {
+            std::wstringstream wsstr(wstr);
+            std::vector<std::wstring> result;
+            for (std::wstring str; std::getline(wsstr, str, VocSplitWChar);)
+                result.push_back(str);
+
+            return result;
+        }
+
+        struct VocabularyTable {
+            static constexpr const std::string_view TableName = "Vocabulary";
+
+            static constexpr const std::string_view English = "English";
+            static constexpr const std::string_view Kana = "Kana";
+            static constexpr const std::string_view Kanji = "Kanji";
+            static constexpr const std::string_view Type = "Type";
+
+            static void createTable(sqlite3* db) {
+                const auto createVocabularyTable =
+                    "create table if not exists " +
+                    std::string(VocabularyTable::TableName) + " (" +
+                    std::string(VocabularyTable::English) + " text," +
+                    std::string(VocabularyTable::Kana) + " text," +
+                    std::string(VocabularyTable::Kanji) + " text," +
+                    std::string(VocabularyTable::Type) + " int32)";
+
+                if (sqlite3_exec(db, createVocabularyTable.c_str(), nullptr,
+                                 nullptr, nullptr) != SQLITE_OK) {
+                    throw std::runtime_error("");
+                }
+            }
+
+            static detail::VocabularyVector readTable(sqlite3* db) {
+                const auto stm =
+                    "select * from " + std::string(VocabularyTable::TableName);
+                detail::VocabularyVector result;
+                if (sqlite3_exec(db, stm.c_str(), callback, &result, nullptr) !=
+                    SQLITE_OK) {
+                    throw std::runtime_error("");
+                }
+                return result;
+            }
+
+            static bool writeTable(sqlite3* db,
+                                   const detail::VocabularyVector& vocs) {
+                const std::string sql =
+                    "insert into " + std::string(VocabularyTable::TableName) +
+                    " (" + std::string(VocabularyTable::English) + ',' +
+                    std::string(VocabularyTable::Kana) + ',' +
+                    std::string(VocabularyTable::Kanji) + ',' +
+                    std::string(VocabularyTable::Type) + ") values ";
+
+                bool result = true;
+                for (const auto& e : vocs) {
+                    const auto stm = sql + vocabularyToString(e) + ';';
+                    if (sqlite3_exec(db, stm.c_str(), nullptr, nullptr,
+                                     nullptr) != SQLITE_OK) {
+                        result = false;
+                    }
+                }
+                return result;
+            }
+
+          private:
+            static std::string
+                vocabularyToString(const detail::Vocabulary& voc) {
+                const auto convFunc = detail::convertWstringUtf8;
+                return R"((")" +
+                       convFunc(detail::util::combineWStringContainerToWstring(
+                           voc.english)) +
+                       R"(",")" + convFunc(voc.kana) + R"(",")" +
+                       convFunc(voc.kanji) + R"(",")" +
+                       std::to_string(int(voc.type)) + R"("))";
+            }
+
+            static int callback(void* vocVec, int argc, char** argv, char**) {
+                assert(argc == 4);
+                if (argc != 4)
+                    return -1;
+
+                auto data = static_cast<detail::VocabularyVector*>(vocVec);
+
+                const auto english = detail::convertUtf8Wstring(argv[0]);
+                const auto kana = detail::convertUtf8Wstring(argv[1]);
+                const auto kanji = detail::convertUtf8Wstring(argv[2]);
+                const auto type = detail::Vocabulary::Type(std::stoi(argv[3]));
+
+                data->emplace_back(kana, splitVocDeckString(english), type,
+                                   kanji);
+                return 0;
+            };
+        };
+
+        struct FlashcardTable {
+            static constexpr const std::string_view TableName = "Flashcards";
+
+            static constexpr const std::string_view Kana = "Kana";
+            static constexpr const std::string_view FlashcardIndex =
+                "FlashcardIndex";
+
+            static void createTable(sqlite3* db) {
+                const auto createVocabularyTable =
+                    "create table if not exists " +
+                    std::string(FlashcardTable::TableName) + " (" +
+                    std::string(FlashcardTable::Kana) + " text," +
+                    std::string(FlashcardTable::FlashcardIndex) + " int32)";
+
+                if (sqlite3_exec(db, createVocabularyTable.c_str(), nullptr,
+                                 nullptr, nullptr) != SQLITE_OK) {
+                    throw std::runtime_error("");
+                }
+            }
+
+            static std::vector<VocabularyDeck::Flashcard>
+                readTable(sqlite3* db, const detail::VocabularyVector& vocs) {
+                const auto stm =
+                    "select * from " + std::string(FlashcardTable::TableName);
+                std::vector<TableStruct> tableStructs;
+                if (sqlite3_exec(db, stm.c_str(), callback, &tableStructs,
+                                 nullptr)) {
+                    throw std::runtime_error("");
+                }
+                return combineStructVocs(vocs, tableStructs);
+            }
+
+            static bool
+                writeTable(sqlite3* db,
+                           const std::vector<VocabularyDeck::Flashcard>& vocs) {
+                if (vocs.empty())
+                    return true;
+
+                const std::string sql =
+                    "insert into " + std::string(FlashcardTable::TableName) +
+                    '(' + std::string(FlashcardTable::Kana) + ',' +
+                    std::string(FlashcardTable::FlashcardIndex) + ") values ";
+
+                bool result = true;
+                for (const auto& e : vocs) {
+                    const auto stm = sql + flashcardToString(e) + ';';
+                    if (sqlite3_exec(db, stm.c_str(), nullptr, nullptr,
+                                     nullptr) != SQLITE_OK) {
+                        result = false;
+                    }
+                }
+                return result;
+            }
+
+          private:
+            struct TableStruct {
+                std::wstring kana;
+                VocabularyDeck::Flashcard::index_type flashcardIndex = 0;
+            };
+
+            static std::vector<VocabularyDeck::Flashcard> combineStructVocs(
+                const detail::VocabularyVector& vocs,
+                const std::vector<TableStruct>& tableStructs) {
+
+                std::vector<VocabularyDeck::Flashcard> result;
+                for (const auto& e : tableStructs) {
+                    auto& card = result.emplace_back();
+                    card.cardIndex = e.flashcardIndex;
+                    card.vocIter =
+                        std::find_if(vocs.cbegin(), vocs.cend(),
+                                     [&e](const detail::Vocabulary& voc) {
+                                         return voc.kana == e.kana;
+                                     });
+                    assert(card.vocIter != vocs.cend());
+                    if (card.vocIter == vocs.cend())
+                        result.pop_back();
+                }
+                return result;
+            }
+
+            static std::string
+                flashcardToString(const VocabularyDeck::Flashcard& card) {
+                return '(' + detail::convertWstringUtf8(card.vocIter->kana) +
+                       ',' + std::to_string(card.cardIndex) + ')';
+            }
+
+            static int callback(void* vec, int argc, char** argv, char**) {
+                assert(argc == 2);
+                if (argc != 2)
+                    return -1;
+
+                auto data = static_cast<std::vector<TableStruct>*>(vec);
+                auto& card = data->emplace_back();
+                card.kana = detail::convertUtf8Wstring(argv[0]);
+                card.flashcardIndex = std::stoi(argv[1]);
+                return 0;
+            };
+        };
+        static detail::VocabularyVector readVocabulary(sqlite3* db) {
+            assert(db);
+            VocabularyTable::createTable(db);
+            return VocabularyTable::readTable(db);
+        }
+
+        static std::vector<VocabularyDeck::Flashcard>
+            readFlashcards(const detail::VocabularyVector& vocs, sqlite3* db) {
+            assert(db);
+            FlashcardTable::createTable(db);
+            return FlashcardTable::readTable(db, vocs);
+        }
+
+        static bool writeVocabulary(sqlite3* db,
+                                    const detail::VocabularyVector& vocs) {
+            assert(db);
+            VocabularyTable::createTable(db);
+            return VocabularyTable::writeTable(db, vocs);
+        }
+
+        static bool writeFlashcards(
+            sqlite3* db,
+            const std::vector<VocabularyDeck::Flashcard>& flashcards) {
+            assert(db);
+            FlashcardTable::createTable(db);
+            return FlashcardTable::writeTable(db, flashcards);
+        }
+    };
+
+    bool VocabularyDeck::_saveToFile(const std::filesystem::path& path) const {
+        detail::util::Sqlite3OpenCloseHelper db(path.string());
+        if (!db)
+            return false;
+
+        using Vdsh = VocabularyDeck_SaveLoad_Helper;
+        if (!Vdsh::writeVocabulary(db, this->m_Vocabulary) ||
+            !Vdsh::writeFlashcards(db, this->m_SortedFlashcards)) {
+            return false;
+        }
+        return true;
+    }
+
+    bool VocabularyDeck::_loadFromFile(const std::filesystem::path& path) {
+        detail::util::Sqlite3OpenCloseHelper db(path.string());
+        if (!db)
+            return false;
+
+        using Vdsh = VocabularyDeck_SaveLoad_Helper;
+        this->m_DeckName = path.filename().string();
+        this->m_Vocabulary = Vdsh::readVocabulary(db);
+        this->m_SortedFlashcards = Vdsh::readFlashcards(this->m_Vocabulary, db);
+        std::sort(this->m_SortedFlashcards.begin(),
+                  this->m_SortedFlashcards.end());
         return true;
     }
 

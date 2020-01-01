@@ -19,10 +19,15 @@ inline static constexpr const wchar_t hiraganaMax = L'ゖ';
 
 namespace detail {
 
+    static std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>
+        stringWstringConverter;
+
     std::wstring convertUtf8Wstring(const std::string& str) {
-        static std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>
-            converter;
-        return converter.from_bytes(str);
+        return stringWstringConverter.from_bytes(str);
+    }
+
+    std::string convertWstringUtf8(const std::wstring& str) {
+        return stringWstringConverter.to_bytes(str);
     }
 
     constexpr int simpleHash(std::string_view view) {
@@ -227,9 +232,12 @@ namespace detail {
         return result;
     }
 
-    [[nodiscard]] std::vector<std::wstring> splitAnki(std::wstring_view str) {
+    [[nodiscard]] std::vector<std::wstring> splitAnki(const std::wstring& str) {
         std::vector<std::wstring> split;
-        //    boost::split(split, str, boost::is_any_of(L","));
+        std::wstringstream wsstr(str);
+        for (std::wstring value; std::getline(wsstr, value, L',');)
+            split.push_back(value);
+
         return split;
     }
 
@@ -280,6 +288,7 @@ namespace detail {
     std::optional<VocabularyVector> VocParser::parseAnkiDataBase(
         const std::filesystem::path& fileNameKanjiEng,
         const std::filesystem::path& fileNameKanjiHiragana) {
+        (void)sqlite3_initialize();
         auto eng = _parseAnkiDataBase(fileNameKanjiEng.string());
         auto hira = _parseAnkiDataBase(fileNameKanjiHiragana.string());
         std::sort(eng.begin(), eng.end());

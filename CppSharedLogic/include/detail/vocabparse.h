@@ -8,6 +8,9 @@
 
 namespace detail {
 
+    std::wstring convertUtf8Wstring(const std::string& str);
+    std::string convertWstringUtf8(const std::wstring& str);
+
     struct Vocabulary {
         enum class Type {
             // have to be ascending ordered

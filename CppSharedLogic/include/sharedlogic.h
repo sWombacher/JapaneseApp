@@ -47,17 +47,20 @@ namespace shared {
 
         bool addFlashcard(const Flashcard& fc);
 
-        void load(std::wstring_view filename);
+        bool load(std::wstring_view filename);
 
-        void save();
-        void saveAs(std::wstring_view filename);
+        bool save();
+        bool saveAs(std::wstring filename);
 
-        void addVocabularyUnique(detail::Vocabulary voc);
+        void addVocabularyUnique(const detail::Vocabulary& voc);
 
         void clear();
         bool removeVocabulary(const detail::Vocabulary& voc);
 
       private:
+        bool _saveToFile(const std::filesystem::path& path) const;
+        bool _loadFromFile(const std::filesystem::path& path);
+
         std::string m_DeckName;
         detail::VocabularyVector m_Vocabulary;
         std::vector<Flashcard> m_SortedFlashcards;
@@ -106,7 +109,7 @@ namespace shared {
             Mixed = EnglishToKana | KanaToEnglish
         };
 
-        QuestionHandler(std::shared_ptr<const VocabularyDeck> manager);
+        QuestionHandler(std::shared_ptr<VocabularyDeck> manager);
         void operator=(QuestionHandler&) = delete;
         QuestionHandler(QuestionHandler&) = delete;
 
@@ -117,8 +120,10 @@ namespace shared {
                                FlagEnum_TranslationType::Mixed);
 
       private:
-        void acceptAnswerCallback(unsigned vocIdx, bool accept);
-        std::shared_ptr<const VocabularyDeck> m_VocabularyMaanger;
+        void acceptAnswerCallback(VocabularyDeck::Flashcard::index_type vocIdx,
+                                  bool accept);
+
+        std::shared_ptr<VocabularyDeck> m_VocabularyMaanger;
     };
 
     struct GenericTranslator {
@@ -169,9 +174,12 @@ namespace shared {
     };
 
     struct LogicHandler {
+        // jmdict is not recommended due to to many vocabulary and other reasons
         LogicHandler(const std::filesystem::path& databasesDirectory,
-                     const std::filesystem::path& userFilePath);
+                     const std::filesystem::path& userFilePath,
+                     bool enableJmdict = false);
 
+        const detail::VocabularyVector& getAllVocabulary() const;
         const VocabularyTranslator& getVocabularyTranslator() const;
 
         VocabularyDeck createVocabularyDeck() const;
@@ -183,7 +191,8 @@ namespace shared {
         bool removeDeck(std::wstring_view filename) const;
         std::shared_ptr<const VocabularyDeck> getCurrentDeck() const;
 
-        static constexpr const auto VocabularyDeck_Exstension = ".vd";
+        static constexpr const std::wstring_view VocabularyDeck_Exstension =
+            L".vd";
 
         static constexpr const auto FileName_Jmdict = "JMdict_e";
 
@@ -205,7 +214,7 @@ namespace shared {
                 detail::Vocabulary::Type::N5, "n5")};
 
       private:
-        std::shared_ptr<const VocabularyDeck> m_CurrentDeck;
+        std::shared_ptr<VocabularyDeck> m_CurrentDeck;
 
         const VocabularyTranslator m_Translator;
         const std::filesystem::path m_UserFilePath;
