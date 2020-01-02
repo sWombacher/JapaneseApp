@@ -206,6 +206,10 @@ namespace shared {
         : m_KbType(kbt), m_Question(questionVoc), m_Answers(std::move(answers)),
           m_AnswerCallback(std::move(answerCallback)) {}
 
+    Question::KeyboardType Question::getKeyboardType() const {
+        return this->m_KbType;
+    }
+
     const std::vector<std::wstring>& Question::getAnswers() const {
         return this->m_Answers;
     }
@@ -410,6 +414,10 @@ namespace shared {
                                    const std::wstring& filename)
         : m_UserFilePath(userFilePath) {
         load(filename);
+    }
+
+    const std::string& VocabularyDeck::getDeckname() const {
+        return this->m_DeckName;
     }
 
     template <typename FlashcardContainer>

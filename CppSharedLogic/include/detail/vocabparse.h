@@ -77,7 +77,7 @@ namespace detail {
         // parse jmdict file format,
         // link: https://www.edrdg.org/jmdict/j_jmdict.html
         [[nodiscard]] static std::optional<VocabularyVector>
-            parseJMDictFile(const boost::filesystem::path& fileName);
+            parseJMDictFile(const boost::filesystem::path& filePath);
         [[nodiscard]] static std::optional<VocabularyVector>
             parseJMDictData(std::string_view data);
 

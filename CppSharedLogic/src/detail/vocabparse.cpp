@@ -8,6 +8,7 @@
 #include <locale>
 #include <string_view>
 #include <sstream>
+#include <fstream>
 
 #include <sqlite3.h>
 #include <tinyxml2.h>
@@ -152,8 +153,8 @@ namespace detail {
     }
 
     std::optional<VocabularyVector>
-        VocParser::parseJMDictFile(const boost::filesystem::path& fileName) {
-        std::fstream file(fileName, std::fstream::in);
+        VocParser::parseJMDictFile(const boost::filesystem::path& filePath) {
+        std::fstream file(filePath.string(), std::fstream::in);
         std::string data((std::istreambuf_iterator<char>(file)),
                          (std::istreambuf_iterator<char>()));
         return parseJMDictData(data);
