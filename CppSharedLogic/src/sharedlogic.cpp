@@ -9,6 +9,31 @@
 
 #include "detail/util.hpp"
 
+namespace parameter {
+
+static constexpr const std::wstring_view VocabularyDeck_Exstension = L".vd";
+
+static constexpr const auto FileName_Jmdict = "JMdict_e";
+
+static constexpr const auto PostFix_Anki_KanjiEnglish =
+    "-vocab-kanji-eng.anki";
+static constexpr const auto PostFix_Anki_KanjiHiragana =
+    "-vocab-kanji-hiragana.anki";
+
+static constexpr std::array VocabularyType_Prefix = {
+    std::pair<detail::Vocabulary::Type, const char*>(
+        detail::Vocabulary::Type::N1, "n1"),
+    std::pair<detail::Vocabulary::Type, const char*>(
+        detail::Vocabulary::Type::N2, "n2"),
+    std::pair<detail::Vocabulary::Type, const char*>(
+        detail::Vocabulary::Type::N3, "n3"),
+    std::pair<detail::Vocabulary::Type, const char*>(
+        detail::Vocabulary::Type::N4, "n4"),
+    std::pair<detail::Vocabulary::Type, const char*>(
+        detail::Vocabulary::Type::N5, "n5")};
+
+}
+
 namespace shared {
 
     class QuestionSetHelper {
@@ -268,10 +293,10 @@ namespace shared {
         readAnkiFromBasepathAndPrefix(const std::filesystem::path& basepath,
                                       const std::string& prefix) {
         const auto kanji_english_filepath =
-            basepath / (prefix + LogicHandler::PostFix_Anki_KanjiEnglish);
+            basepath / (prefix + parameter::PostFix_Anki_KanjiEnglish);
 
         const auto kanji_hiragana_filepath =
-            basepath / (prefix + LogicHandler::PostFix_Anki_KanjiHiragana);
+            basepath / (prefix + parameter::PostFix_Anki_KanjiHiragana);
 
         if (!std::filesystem::exists(kanji_english_filepath) ||
             !std::filesystem::exists(kanji_hiragana_filepath)) {
@@ -286,7 +311,7 @@ namespace shared {
     static detail::VocabularyVector
         parseAnkiData(const std::filesystem::path& basepath) {
         detail::VocabularyVector result;
-        for (const auto& e : LogicHandler::VocabularyType_Prefix) {
+        for (const auto& e : parameter::VocabularyType_Prefix) {
             auto anki = readAnkiFromBasepathAndPrefix(basepath, e.second);
             for (auto& voc : anki)
                 voc.type = e.first;
@@ -302,7 +327,7 @@ namespace shared {
             return {};
 
         const auto parsed = detail::VocParser::parseJMDictFile(
-            basepath / LogicHandler::FileName_Jmdict);
+            basepath / parameter::FileName_Jmdict);
 
         return parsed ? *parsed : detail::VocabularyVector();
     }
@@ -362,7 +387,7 @@ namespace shared {
     }
 
     std::vector<std::wstring> LogicHandler::listDecks() const {
-        const auto ext = LogicHandler::VocabularyDeck_Exstension;
+        const auto ext = parameter::VocabularyDeck_Exstension;
         std::vector<std::wstring> decks;
         for (const auto& e :
              std::filesystem::directory_iterator(this->m_UserFilePath)) {
@@ -487,7 +512,7 @@ namespace shared {
     }
 
     bool VocabularyDeck::saveAs(std::wstring filename) {
-        const auto& ext = LogicHandler::VocabularyDeck_Exstension;
+        const auto& ext = parameter::VocabularyDeck_Exstension;
         if (const auto pos = filename.rfind('.'); pos != std::string::npos)
             filename.replace(pos, std::string::npos, ext);
         else

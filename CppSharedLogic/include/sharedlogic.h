@@ -1,9 +1,10 @@
 #pragma once
 
 #include <cinttypes>
-#include <detail/vocabparse.h>
 #include <filesystem>
 #include <optional>
+
+#include "detail/vocabparse.h"
 
 namespace shared {
 
@@ -25,9 +26,6 @@ namespace shared {
         };
         VocabularyDeck(const std::filesystem::path& userFilePath,
                        std::wstring_view filename = L"");
-
-        VocabularyDeck(VocabularyDeck&) = delete;
-        void operator=(VocabularyDeck&) = delete;
 
         const std::string& getDeckname() const;
         operator const detail::VocabularyVector&() const;
@@ -110,8 +108,6 @@ namespace shared {
         };
 
         QuestionHandler(std::shared_ptr<VocabularyDeck> manager);
-        void operator=(QuestionHandler&) = delete;
-        QuestionHandler(QuestionHandler&) = delete;
 
         /// TODO: add feedback -> algo for 'correct/incorrect answers'
         std::vector<Question>
@@ -190,28 +186,6 @@ namespace shared {
         std::vector<std::wstring> listDecks() const;
         bool removeDeck(std::wstring_view filename) const;
         std::shared_ptr<const VocabularyDeck> getCurrentDeck() const;
-
-        static constexpr const std::wstring_view VocabularyDeck_Exstension =
-            L".vd";
-
-        static constexpr const auto FileName_Jmdict = "JMdict_e";
-
-        static constexpr const auto PostFix_Anki_KanjiEnglish =
-            "-vocab-kanji-eng.anki";
-        static constexpr const auto PostFix_Anki_KanjiHiragana =
-            "-vocab-kanji-hiragana.anki";
-
-        static constexpr std::array VocabularyType_Prefix = {
-            std::pair<detail::Vocabulary::Type, const char*>(
-                detail::Vocabulary::Type::N1, "n1"),
-            std::pair<detail::Vocabulary::Type, const char*>(
-                detail::Vocabulary::Type::N2, "n2"),
-            std::pair<detail::Vocabulary::Type, const char*>(
-                detail::Vocabulary::Type::N3, "n3"),
-            std::pair<detail::Vocabulary::Type, const char*>(
-                detail::Vocabulary::Type::N4, "n4"),
-            std::pair<detail::Vocabulary::Type, const char*>(
-                detail::Vocabulary::Type::N5, "n5")};
 
       private:
         std::shared_ptr<VocabularyDeck> m_CurrentDeck;
