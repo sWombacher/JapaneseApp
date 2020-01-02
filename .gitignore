@@ -1,6 +1,8 @@
 # C++ related ignores
 build-*
 CppSharedLogic/CMakeLists.txt.user
+AndroidApp/app/src/main/java/*cxx
+AndroidApp/app/src/main/java/*java
 
 # Built application files
 *.apk
