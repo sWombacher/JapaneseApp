@@ -1,8 +1,9 @@
 #pragma once
 
 #include <cinttypes>
-#include <filesystem>
 #include <optional>
+
+#include <boost/filesystem.hpp>
 
 #include "detail/vocabparse.h"
 
@@ -24,8 +25,8 @@ namespace shared {
             bool operator<(const Flashcard& rhs) const;
             bool operator==(const Flashcard& rhs) const;
         };
-        VocabularyDeck(const std::filesystem::path& userFilePath,
-                       std::wstring_view filename = L"");
+        VocabularyDeck(const boost::filesystem::path& userFilePath,
+                       const std::wstring& filename = L"");
 
         const std::string& getDeckname() const;
         operator const detail::VocabularyVector&() const;
@@ -45,7 +46,7 @@ namespace shared {
 
         bool addFlashcard(const Flashcard& fc);
 
-        bool load(std::wstring_view filename);
+        bool load(const std::wstring& filename);
 
         bool save();
         bool saveAs(std::wstring filename);
@@ -56,13 +57,13 @@ namespace shared {
         bool removeVocabulary(const detail::Vocabulary& voc);
 
       private:
-        bool _saveToFile(const std::filesystem::path& path) const;
-        bool _loadFromFile(const std::filesystem::path& path);
+        bool _saveToFile(const boost::filesystem::path& path) const;
+        bool _loadFromFile(const boost::filesystem::path& path);
 
         std::string m_DeckName;
         detail::VocabularyVector m_Vocabulary;
         std::vector<Flashcard> m_SortedFlashcards;
-        const std::filesystem::path m_UserFilePath;
+        const boost::filesystem::path m_UserFilePath;
     };
 
     struct Question {
@@ -171,8 +172,8 @@ namespace shared {
 
     struct LogicHandler {
         // jmdict is not recommended due to to many vocabulary and other reasons
-        LogicHandler(const std::filesystem::path& databasesDirectory,
-                     const std::filesystem::path& userFilePath,
+        LogicHandler(const boost::filesystem::path& databasesDirectory,
+                     const boost::filesystem::path& userFilePath,
                      bool enableJmdict = false);
 
         const detail::VocabularyVector& getAllVocabulary() const;
@@ -182,16 +183,16 @@ namespace shared {
         QuestionHandler createQuestionHandler() const;
         GenericTranslator createGenericTranslator() const;
 
-        void loadDeck(std::wstring_view filename);
+        void loadDeck(const std::wstring& filename);
         std::vector<std::wstring> listDecks() const;
-        bool removeDeck(std::wstring_view filename) const;
+        bool removeDeck(const std::wstring& filename) const;
         std::shared_ptr<const VocabularyDeck> getCurrentDeck() const;
 
       private:
         std::shared_ptr<VocabularyDeck> m_CurrentDeck;
 
         const VocabularyTranslator m_Translator;
-        const std::filesystem::path m_UserFilePath;
+        const boost::filesystem::path m_UserFilePath;
         const detail::VocabularyVector m_AnkiVocabulary;
         const detail::VocabularyVector m_JmdictVocabulary;
 

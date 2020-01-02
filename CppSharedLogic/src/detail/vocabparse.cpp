@@ -152,7 +152,7 @@ namespace detail {
     }
 
     std::optional<VocabularyVector>
-        VocParser::parseJMDictFile(const std::filesystem::path& fileName) {
+        VocParser::parseJMDictFile(const boost::filesystem::path& fileName) {
         std::fstream file(fileName, std::fstream::in);
         std::string data((std::istreambuf_iterator<char>(file)),
                          (std::istreambuf_iterator<char>()));
@@ -287,8 +287,8 @@ namespace detail {
     }
 
     std::optional<VocabularyVector> VocParser::parseAnkiDataBase(
-        const std::filesystem::path& fileNameKanjiEng,
-        const std::filesystem::path& fileNameKanjiHiragana) {
+        const boost::filesystem::path& fileNameKanjiEng,
+        const boost::filesystem::path& fileNameKanjiHiragana) {
         (void)sqlite3_initialize();
         auto eng = _parseAnkiDataBase(fileNameKanjiEng.string());
         auto hira = _parseAnkiDataBase(fileNameKanjiHiragana.string());

@@ -1,6 +1,7 @@
 #pragma once
 
-#include <filesystem>
+#include <boost/filesystem.hpp>
+
 #include <functional>
 #include <optional>
 #include <string>
@@ -76,15 +77,15 @@ namespace detail {
         // parse jmdict file format,
         // link: https://www.edrdg.org/jmdict/j_jmdict.html
         [[nodiscard]] static std::optional<VocabularyVector>
-            parseJMDictFile(const std::filesystem::path& fileName);
+            parseJMDictFile(const boost::filesystem::path& fileName);
         [[nodiscard]] static std::optional<VocabularyVector>
             parseJMDictData(std::string_view data);
 
         // parse anki files from:
         // http://www.tanos.co.uk/jlpt/
         [[nodiscard]] static std::optional<VocabularyVector> parseAnkiDataBase(
-            const std::filesystem::path& fileNameKanjiEng,
-            const std::filesystem::path& fileNameKanjiHiragana);
+            const boost::filesystem::path& fileNameKanjiEng,
+            const boost::filesystem::path& fileNameKanjiHiragana);
     };
 
 } // namespace detail

@@ -6,10 +6,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lstdc++fs")
-endif()
-
 file(GLOB EXTERNAL_FILES
     3rd_party/external/*.h
     3rd_party/external/*.c
@@ -32,9 +28,14 @@ file(GLOB SRC_FILES
 find_package(Threads REQUIRED)
 find_library(LibDl NAMES dl REQUIRED)
 
+# we use boost since ndk r20 doesn't seem to support std::filesystem yet...
+# boost for android can be build using this git repo:
+# https://github.com/moritz-wundke/Boost-for-Android
+find_package(Boost REQUIRED COMPONENTS filesystem)
+
 set(ExternalLibs "external")
 add_library(${ExternalLibs} STATIC ${EXTERNAL_FILES})
-target_link_libraries(${ExternalLibs} PRIVATE Threads::Threads ${LibDl})
+target_link_libraries(${ExternalLibs} PRIVATE Threads::Threads ${LibDl} ${Boost_LIBRARIES})
 
 add_library(${PROJECT_NAME} STATIC ${HEADER_FILES} ${SRC_FILES})
 target_include_directories(${PROJECT_NAME} PUBLIC include 3rd_party/external)

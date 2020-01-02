@@ -2,32 +2,32 @@
 
 #include <iostream>
 
+#include <array>
 #include <cassert>
 #include <random>
 #include <sqlite3.h>
 #include <sstream>
-#include <array>
 
 #include "detail/util.hpp"
 
 namespace parameter {
 
-static constexpr const std::wstring_view VocabularyDeck_Exstension = L".vd";
+    static constexpr const std::wstring_view VocabularyDeck_Exstension = L".vd";
 
-static constexpr const auto FileName_Jmdict = "JMdict_e";
+    static constexpr const auto FileName_Jmdict = "JMdict_e";
 
-static constexpr const auto PostFix_Anki_KanjiEnglish =
-    "-vocab-kanji-eng.anki";
-static constexpr const auto PostFix_Anki_KanjiHiragana =
-    "-vocab-kanji-hiragana.anki";
+    static constexpr const auto PostFix_Anki_KanjiEnglish =
+        "-vocab-kanji-eng.anki";
+    static constexpr const auto PostFix_Anki_KanjiHiragana =
+        "-vocab-kanji-hiragana.anki";
 
-static constexpr std::array VocabularyType_Prefix = {
-    std::make_pair(detail::Vocabulary::Type::N1, "n1"),
-    std::make_pair(detail::Vocabulary::Type::N2, "n2"),
-    std::make_pair(detail::Vocabulary::Type::N3, "n3"),
-    std::make_pair(detail::Vocabulary::Type::N4, "n4"),
-    std::make_pair(detail::Vocabulary::Type::N5, "n5")};
-}
+    static constexpr std::array VocabularyType_Prefix = {
+        std::make_pair(detail::Vocabulary::Type::N1, "n1"),
+        std::make_pair(detail::Vocabulary::Type::N2, "n2"),
+        std::make_pair(detail::Vocabulary::Type::N3, "n3"),
+        std::make_pair(detail::Vocabulary::Type::N4, "n4"),
+        std::make_pair(detail::Vocabulary::Type::N5, "n5")};
+} // namespace parameter
 
 namespace shared {
 
@@ -285,7 +285,7 @@ namespace shared {
     }
 
     static detail::VocabularyVector
-        readAnkiFromBasepathAndPrefix(const std::filesystem::path& basepath,
+        readAnkiFromBasepathAndPrefix(const boost::filesystem::path& basepath,
                                       const std::string& prefix) {
         const auto kanji_english_filepath =
             basepath / (prefix + parameter::PostFix_Anki_KanjiEnglish);
@@ -293,8 +293,8 @@ namespace shared {
         const auto kanji_hiragana_filepath =
             basepath / (prefix + parameter::PostFix_Anki_KanjiHiragana);
 
-        if (!std::filesystem::exists(kanji_english_filepath) ||
-            !std::filesystem::exists(kanji_hiragana_filepath)) {
+        if (!boost::filesystem::exists(kanji_english_filepath) ||
+            !boost::filesystem::exists(kanji_hiragana_filepath)) {
             return {};
         }
         const auto result = detail::VocParser::parseAnkiDataBase(
@@ -304,7 +304,7 @@ namespace shared {
     }
 
     static detail::VocabularyVector
-        parseAnkiData(const std::filesystem::path& basepath) {
+        parseAnkiData(const boost::filesystem::path& basepath) {
         detail::VocabularyVector result;
         for (const auto& e : parameter::VocabularyType_Prefix) {
             auto anki = readAnkiFromBasepathAndPrefix(basepath, e.second);
@@ -317,7 +317,7 @@ namespace shared {
     }
 
     static detail::VocabularyVector
-        parseJmdictData(const std::filesystem::path& basepath, bool enable) {
+        parseJmdictData(const boost::filesystem::path& basepath, bool enable) {
         if (!enable)
             return {};
 
@@ -334,9 +334,9 @@ namespace shared {
         return result;
     }
 
-    LogicHandler::LogicHandler(const std::filesystem::path& databasesDirectory,
-                               const std::filesystem::path& userFilePath,
-                               bool enableJmdict)
+    LogicHandler::LogicHandler(
+        const boost::filesystem::path& databasesDirectory,
+        const boost::filesystem::path& userFilePath, bool enableJmdict)
         : m_Translator(this->m_AllVocabulary), m_UserFilePath(userFilePath),
           m_AnkiVocabulary(parseAnkiData(databasesDirectory)),
           m_JmdictVocabulary(parseJmdictData(databasesDirectory, enableJmdict)),
@@ -366,7 +366,7 @@ namespace shared {
         return GenericTranslator();
     }
 
-    void LogicHandler::loadDeck(std::wstring_view filename) {
+    void LogicHandler::loadDeck(const std::wstring& filename) {
         // always use new deck since the current one might be in use!
         this->m_CurrentDeck =
             std::make_shared<VocabularyDeck>(this->m_UserFilePath, filename);
@@ -385,7 +385,7 @@ namespace shared {
         const auto ext = parameter::VocabularyDeck_Exstension;
         std::vector<std::wstring> decks;
         for (const auto& e :
-             std::filesystem::directory_iterator(this->m_UserFilePath)) {
+             boost::filesystem::directory_iterator(this->m_UserFilePath)) {
             auto name = e.path().filename().wstring();
             if (findExtensionAtEnd(name, ext))
                 decks.push_back(std::move(name));
@@ -393,10 +393,10 @@ namespace shared {
         return decks;
     }
 
-    bool LogicHandler::removeDeck(std::wstring_view filename) const {
+    bool LogicHandler::removeDeck(const std::wstring& filename) const {
         const auto path = this->m_UserFilePath / filename;
-        if (std::filesystem::is_regular_file(path)) {
-            std::filesystem::remove(path);
+        if (boost::filesystem::is_regular_file(path)) {
+            boost::filesystem::remove(path);
             return true;
         }
         return false;
@@ -406,8 +406,8 @@ namespace shared {
         return this->m_CurrentDeck;
     }
 
-    VocabularyDeck::VocabularyDeck(const std::filesystem::path& userFilePath,
-                                   std::wstring_view filename)
+    VocabularyDeck::VocabularyDeck(const boost::filesystem::path& userFilePath,
+                                   const std::wstring& filename)
         : m_UserFilePath(userFilePath) {
         load(filename);
     }
@@ -493,9 +493,9 @@ namespace shared {
         return this->getAllVocabularies();
     }
 
-    bool VocabularyDeck::load(std::wstring_view filename) {
+    bool VocabularyDeck::load(const std::wstring& filename) {
         const auto path = this->m_UserFilePath / filename;
-        if (filename.empty() || !std::filesystem::exists(path))
+        if (filename.empty() || !boost::filesystem::exists(path))
             return false;
 
         return this->_loadFromFile(path);
@@ -503,7 +503,7 @@ namespace shared {
 
     bool VocabularyDeck::save() {
         const auto path = this->m_UserFilePath / this->m_DeckName;
-        if (!std::filesystem::is_regular_file(path))
+        if (!boost::filesystem::is_regular_file(path))
             return false;
 
         return this->_saveToFile(path);
@@ -517,7 +517,7 @@ namespace shared {
             filename += ext;
 
         const auto path = this->m_UserFilePath / filename;
-        if (filename.empty() || std::filesystem::exists(path))
+        if (filename.empty() || boost::filesystem::exists(path))
             return false;
 
         return this->_saveToFile(path);
@@ -769,7 +769,8 @@ namespace shared {
         }
     };
 
-    bool VocabularyDeck::_saveToFile(const std::filesystem::path& path) const {
+    bool
+        VocabularyDeck::_saveToFile(const boost::filesystem::path& path) const {
         detail::util::Sqlite3OpenCloseHelper db(path.string());
         if (!db)
             return false;
@@ -782,7 +783,7 @@ namespace shared {
         return true;
     }
 
-    bool VocabularyDeck::_loadFromFile(const std::filesystem::path& path) {
+    bool VocabularyDeck::_loadFromFile(const boost::filesystem::path& path) {
         detail::util::Sqlite3OpenCloseHelper db(path.string());
         if (!db)
             return false;
