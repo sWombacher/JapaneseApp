@@ -7,6 +7,7 @@
 #include <iostream>
 #include <locale>
 #include <string_view>
+#include <sstream>
 
 #include <sqlite3.h>
 #include <tinyxml2.h>

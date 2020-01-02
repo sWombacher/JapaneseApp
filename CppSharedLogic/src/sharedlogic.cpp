@@ -6,6 +6,7 @@
 #include <random>
 #include <sqlite3.h>
 #include <sstream>
+#include <array>
 
 #include "detail/util.hpp"
 
@@ -21,17 +22,11 @@ static constexpr const auto PostFix_Anki_KanjiHiragana =
     "-vocab-kanji-hiragana.anki";
 
 static constexpr std::array VocabularyType_Prefix = {
-    std::pair<detail::Vocabulary::Type, const char*>(
-        detail::Vocabulary::Type::N1, "n1"),
-    std::pair<detail::Vocabulary::Type, const char*>(
-        detail::Vocabulary::Type::N2, "n2"),
-    std::pair<detail::Vocabulary::Type, const char*>(
-        detail::Vocabulary::Type::N3, "n3"),
-    std::pair<detail::Vocabulary::Type, const char*>(
-        detail::Vocabulary::Type::N4, "n4"),
-    std::pair<detail::Vocabulary::Type, const char*>(
-        detail::Vocabulary::Type::N5, "n5")};
-
+    std::make_pair(detail::Vocabulary::Type::N1, "n1"),
+    std::make_pair(detail::Vocabulary::Type::N2, "n2"),
+    std::make_pair(detail::Vocabulary::Type::N3, "n3"),
+    std::make_pair(detail::Vocabulary::Type::N4, "n4"),
+    std::make_pair(detail::Vocabulary::Type::N5, "n5")};
 }
 
 namespace shared {
@@ -400,8 +395,11 @@ namespace shared {
 
     bool LogicHandler::removeDeck(std::wstring_view filename) const {
         const auto path = this->m_UserFilePath / filename;
-        if (std::filesystem::is_regular_file(path))
+        if (std::filesystem::is_regular_file(path)) {
             std::filesystem::remove(path);
+            return true;
+        }
+        return false;
     }
 
     std::shared_ptr<const VocabularyDeck> LogicHandler::getCurrentDeck() const {
