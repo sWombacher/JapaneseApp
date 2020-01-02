@@ -1,12 +1,20 @@
-cmake_minimum_required(VERSION 3.1)
-project(CppSharedLogic LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.3)
+project(CppSharedLogic LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 
-find_library(LibTinyXML NAMES tinyxml2)
-find_library(LibSql NAMES sqlite3)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lstdc++fs")
+endif()
+
+file(GLOB EXTERNAL_FILES
+    3rd_party/external/*.h
+    3rd_party/external/*.c
+    3rd_party/external/*.cpp
+)
 
 file(GLOB HEADER_FILES
     include/*.h
@@ -21,13 +29,20 @@ file(GLOB SRC_FILES
     src/detail/*.cpp
 )
 
-add_library(${PROJECT_NAME} STATIC ${HEADER_FILES} ${SRC_FILES})
-target_include_directories(${PROJECT_NAME} PUBLIC include)
-target_link_libraries(${PROJECT_NAME} PUBLIC ${LibTinyXML} ${LibSql})
+find_package(Threads REQUIRED)
+find_library(LibDl NAMES dl REQUIRED)
 
-set(CLI_MODULE "cli")
-add_executable(${CLI_MODULE} "main.cpp")
-target_link_libraries(${CLI_MODULE} PRIVATE ${PROJECT_NAME})
+set(ExternalLibs "external")
+add_library(${ExternalLibs} STATIC ${EXTERNAL_FILES})
+target_link_libraries(${ExternalLibs} PRIVATE Threads::Threads ${LibDl})
+
+add_library(${PROJECT_NAME} STATIC ${HEADER_FILES} ${SRC_FILES})
+target_include_directories(${PROJECT_NAME} PUBLIC include 3rd_party/external)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${ExternalLibs})
+
+#set(CLI_MODULE "cli")
+#add_executable(${CLI_MODULE} "main.cpp")
+#target_link_libraries(${CLI_MODULE} PRIVATE ${PROJECT_NAME})
 
 find_package(SWIG REQUIRED)
 find_package(Java REQUIRED)

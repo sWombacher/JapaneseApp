@@ -1,5 +1,6 @@
 #include "sharedlogic.h"
 #include <iostream>
+#include <unordered_map>
 
 static constexpr std::wstring_view StartLoop = L"start ";
 static constexpr std::wstring_view FinishLoop = L"end";
