@@ -49,10 +49,12 @@ if (${BuildCliExecuteable})
 endif()
 
 find_package(SWIG REQUIRED)
-find_package(Java REQUIRED)
 find_package(JNI REQUIRED)
+find_package(Java)
 include(UseJava)
 include(UseSWIG)
+
+set(CMAKE_SWIG_FLAGS -package cpp.shared)
 
 file(GLOB SWIG_FILES ./*.i)
 set(SHARD_MODULE "shared")
