@@ -6,5 +6,5 @@ set(JAVA_JVM_LIBRARY z)
 set(JAVA_INCLUDE_PATH2 z)
 set(JAVA_AWT_INCLUDE_PATH z)
 
-set(CMAKE_SWIG_OUTDIR ${CMAKE_CURRENT_LIST_DIR}/../java/cpp/shared)
+set(CMAKE_SWIG_OUTDIR ${CMAKE_CURRENT_LIST_DIR}/../java/com/cpp/shared)
 add_subdirectory(CppSharedLogic)

@@ -258,8 +258,8 @@ namespace shared {
         throw std::runtime_error("Not implemented yet!");
     }
 
-    std::wstring VocabularyTranslator::translateEnglish(
-        std::wstring_view english) const {
+    std::wstring VocabularyTranslator::translateEnglish(const std::wstring &english) const
+    {
         const auto voc = this->m_VocabularyMaanger.findAllEnglish(english);
         std::vector<std::wstring> tmpContainer(voc.size());
         std::transform(voc.cbegin(), voc.cend(), tmpContainer.begin(),
@@ -274,8 +274,8 @@ namespace shared {
         const detail::VocabularyVector& manager)
         : m_VocabularyMaanger(manager) {}
 
-    std::wstring
-        VocabularyTranslator::translateKana(std::wstring_view kana) const {
+    std::wstring VocabularyTranslator::translateKana(const std::wstring &kana) const
+    {
         const auto voc = this->m_VocabularyMaanger.findAllKana(kana);
         std::vector<std::wstring> tmpContainer(voc.size());
         std::transform(
@@ -338,16 +338,15 @@ namespace shared {
         return result;
     }
 
-    LogicHandler::LogicHandler(
-        const boost::filesystem::path& databasesDirectory,
-        const boost::filesystem::path& userFilePath, bool enableJmdict)
+    LogicHandler::LogicHandler(const std::string &databasesDirectory,
+                               const std::string &userFilePath,
+                               bool enableJmdict)
         : m_Translator(this->m_AllVocabulary), m_UserFilePath(userFilePath),
           m_AnkiVocabulary(parseAnkiData(databasesDirectory)),
           m_JmdictVocabulary(parseJmdictData(databasesDirectory, enableJmdict)),
-          m_AllVocabulary(
-              combineVocs(this->m_AnkiVocabulary, this->m_JmdictVocabulary)) {
-        this->m_CurrentDeck =
-            std::make_shared<VocabularyDeck>(this->m_UserFilePath);
+          m_AllVocabulary(combineVocs(this->m_AnkiVocabulary, this->m_JmdictVocabulary))
+    {
+        this->m_CurrentDeck = std::make_shared<VocabularyDeck>(this->m_UserFilePath.string());
     }
 
     QuestionHandler LogicHandler::createQuestionHandler() const {
@@ -363,7 +362,7 @@ namespace shared {
     }
 
     VocabularyDeck LogicHandler::createVocabularyDeck() const {
-        return VocabularyDeck(this->m_UserFilePath);
+        return VocabularyDeck(this->m_UserFilePath.string());
     }
 
     GenericTranslator LogicHandler::createGenericTranslator() const {
@@ -372,8 +371,8 @@ namespace shared {
 
     void LogicHandler::loadDeck(const std::wstring& filename) {
         // always use new deck since the current one might be in use!
-        this->m_CurrentDeck =
-            std::make_shared<VocabularyDeck>(this->m_UserFilePath, filename);
+        this->m_CurrentDeck = std::make_shared<VocabularyDeck>(this->m_UserFilePath.string(),
+                                                               filename);
     }
 
     static bool findExtensionAtEnd(std::wstring str, std::wstring_view ext) {
@@ -410,9 +409,9 @@ namespace shared {
         return this->m_CurrentDeck;
     }
 
-    VocabularyDeck::VocabularyDeck(const boost::filesystem::path& userFilePath,
-                                   const std::wstring& filename)
-        : m_UserFilePath(userFilePath) {
+    VocabularyDeck::VocabularyDeck(const std::string &userFilePath, const std::wstring &filename)
+        : m_UserFilePath(userFilePath)
+    {
         load(filename);
     }
 
@@ -506,7 +505,7 @@ namespace shared {
         if (filename.empty() || !boost::filesystem::exists(path))
             return false;
 
-        return this->_loadFromFile(path);
+        return this->_loadFromFile(path.string());
     }
 
     bool VocabularyDeck::save() {
@@ -514,7 +513,7 @@ namespace shared {
         if (!boost::filesystem::is_regular_file(path))
             return false;
 
-        return this->_saveToFile(path);
+        return this->_saveToFile(path.string());
     }
 
     bool VocabularyDeck::saveAs(std::wstring filename) {
@@ -528,7 +527,7 @@ namespace shared {
         if (filename.empty() || boost::filesystem::exists(path))
             return false;
 
-        return this->_saveToFile(path);
+        return this->_saveToFile(path.string());
     }
 
     void VocabularyDeck::addVocabularyUnique(const detail::Vocabulary& voc) {
@@ -777,9 +776,9 @@ namespace shared {
         }
     };
 
-    bool
-        VocabularyDeck::_saveToFile(const boost::filesystem::path& path) const {
-        detail::util::Sqlite3OpenCloseHelper db(path.string());
+    bool VocabularyDeck::_saveToFile(const std::string &path) const
+    {
+        detail::util::Sqlite3OpenCloseHelper db(path);
         if (!db)
             return false;
 
@@ -791,13 +790,14 @@ namespace shared {
         return true;
     }
 
-    bool VocabularyDeck::_loadFromFile(const boost::filesystem::path& path) {
-        detail::util::Sqlite3OpenCloseHelper db(path.string());
+    bool VocabularyDeck::_loadFromFile(const std::string &path)
+    {
+        detail::util::Sqlite3OpenCloseHelper db(path);
         if (!db)
             return false;
 
         using Vdsh = VocabularyDeck_SaveLoad_Helper;
-        this->m_DeckName = path.filename().string();
+        this->m_DeckName = boost::filesystem::path(path).filename().string();
         this->m_Vocabulary = Vdsh::readVocabulary(db);
         this->m_SortedFlashcards = Vdsh::readFlashcards(this->m_Vocabulary, db);
         std::sort(this->m_SortedFlashcards.begin(),

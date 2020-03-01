@@ -25,8 +25,7 @@ namespace shared {
             bool operator<(const Flashcard& rhs) const;
             bool operator==(const Flashcard& rhs) const;
         };
-        VocabularyDeck(const boost::filesystem::path& userFilePath,
-                       const std::wstring& filename = L"");
+        VocabularyDeck(const std::string &userFilePath, const std::wstring &filename = L"");
 
         const std::string& getDeckname() const;
         operator const detail::VocabularyVector&() const;
@@ -54,11 +53,11 @@ namespace shared {
         void addVocabularyUnique(const detail::Vocabulary& voc);
 
         void clear();
-        bool removeVocabulary(const detail::Vocabulary& voc);
+        bool removeVocabulary(const detail::Vocabulary &voc);
 
-      private:
-        bool _saveToFile(const boost::filesystem::path& path) const;
-        bool _loadFromFile(const boost::filesystem::path& path);
+    private:
+        bool _saveToFile(const std::string &path) const;
+        bool _loadFromFile(const std::string &path);
 
         std::string m_DeckName;
         detail::VocabularyVector m_Vocabulary;
@@ -159,10 +158,10 @@ namespace shared {
     };
 
     struct VocabularyTranslator {
-        std::wstring translateKana(std::wstring_view kana) const;
-        std::wstring translateEnglish(std::wstring_view english) const;
+        std::wstring translateKana(const std::wstring &kana) const;
+        std::wstring translateEnglish(const std::wstring &english) const;
 
-      protected:
+    protected:
         friend LogicHandler;
         VocabularyTranslator(const detail::VocabularyVector& manager);
 
@@ -172,8 +171,8 @@ namespace shared {
 
     struct LogicHandler {
         // jmdict is not recommended due to to many vocabulary and other reasons
-        LogicHandler(const boost::filesystem::path& databasesDirectory,
-                     const boost::filesystem::path& userFilePath,
+        LogicHandler(const std::string &databasesDirectory,
+                     const std::string &userFilePath,
                      bool enableJmdict = false);
 
         const detail::VocabularyVector& getAllVocabulary() const;

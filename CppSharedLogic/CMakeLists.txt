@@ -26,7 +26,7 @@ file(GLOB SRC_FILES
 )
 
 find_package(Threads REQUIRED)
-#find_library(LibDl NAMES dl REQUIRED)
+find_library(LibDl NAMES dl REQUIRED)
 
 # we use boost since ndk r20 doesn't seem to support std::filesystem yet...
 # boost for android can be build using this git repo:
@@ -54,7 +54,7 @@ find_package(Java)
 include(UseJava)
 include(UseSWIG)
 
-set(CMAKE_SWIG_FLAGS -package cpp.shared)
+set(CMAKE_SWIG_FLAGS -package com.cpp.shared)
 
 file(GLOB SWIG_FILES ./*.i)
 set(SHARD_MODULE "shared")

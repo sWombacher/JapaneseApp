@@ -157,9 +157,10 @@ static void startLoop(shared::LogicHandler& lh) {
     }
 }
 
-int main() {
+int main()
+{
     setlocale(LC_ALL, "en_US.utf8");
-    shared::LogicHandler lh(L"../../databases", L"./");
+    shared::LogicHandler lh("../databases", "./");
     printUsage();
     startLoop(lh);
     return 0;

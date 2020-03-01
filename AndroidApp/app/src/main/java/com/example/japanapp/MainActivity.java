@@ -7,11 +7,6 @@ import android.view.View;
 
 public class MainActivity extends AppCompatActivity {
 
-    // Used to load the 'native-lib' library on application startup.
-    static {
-        System.loadLibrary("shared");
-    }
-
     void addButtonHandlers() {
         findViewById(R.id.m_BtnCharacters).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -56,5 +51,6 @@ public class MainActivity extends AppCompatActivity {
         setTitle("JapanApp - Main");
         setContentView(R.layout.activity_main);
         addButtonHandlers();
+        LogicHandlerAbstraction.init(getResources().getAssets(), getFilesDir().toString());
     }
 }
