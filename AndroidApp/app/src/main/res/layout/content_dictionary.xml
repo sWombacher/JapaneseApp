@@ -9,13 +9,57 @@
     tools:showIn="@layout/activity_dictionary">
 
     <LinearLayout
-        android:layout_width="395dp"
-        android:layout_height="659dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:layout_marginTop="12dp"
+        android:gravity="center_horizontal"
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"/>
+        app:layout_constraintTop_toTopOf="parent">
+
+
+        <RadioGroup
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checkedButton="@id/m_DictionaryRadioButtonEnglish"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/m_DictionaryRadioButtonEnglish"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="English   " />
+
+            <RadioButton
+                android:id="@+id/m_DictionaryRadioButtonKana"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Kana      " />
+        </RadioGroup>
+
+        <EditText
+            android:id="@+id/m_DictionarySearchField"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ems="10"
+            android:hint="Search field..."
+            android:inputType="textPersonName" />
+
+        <Button
+            android:id="@+id/m_BtnDictionarySearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Search" />
+
+        <TextView
+            android:id="@+id/m_DictionaryTextViewResult"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="No vocabulary found."
+            android:textSize="30sp" />
+
+    </LinearLayout>
 </android.support.constraint.ConstraintLayout>
